@@ -30,18 +30,26 @@ load_dotenv()
 HF_API_KEY = os.getenv("HF_API_KEY")
 
 def chatbot_response(user_input):
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    data = {"inputs": user_input}
-    
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1",
-        json=data, headers=headers
-    )
+    import requests
 
-    if response.status_code == 200:
-        return response.json().get("generated_text", "I couldn't process that.")
-    else:
-        return f"❌ API Error {response.status_code}: {response.text}"
+    url = "https://api.together.xyz/inference"
+    data = {
+        "model": "openchat/openchat-3.5-0106",
+        "prompt": user_input,
+        "max_tokens": 250
+    }
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 200:
+            return response.json().get("text", "I couldn't process that.")
+        elif response.status_code == 401:
+            return "⚠️ API access restricted. Trying another model..."
+        else:
+            return f"❌ API Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return f"❌ Request failed: {str(e)}"
 
 
 # ✅ Start the bot manually
