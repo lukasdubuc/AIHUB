@@ -2,6 +2,7 @@ import json
 import os
 import asyncio
 import nest_asyncio
+import requests
 from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -31,14 +32,26 @@ bot_active = False  # ✅ Bot starts OFF
 
 # ✅ Chatbot responses
 def chatbot_response(user_input):
-    responses = {
-        "hi": "Hello! How can I assist you today?",
-        "hello": "Hey there! What’s on your mind?",
-        "how are you": "I'm just an AI, but I'm doing great! How about you?",
-        "what can you do": "I can chat, help with business automation, and assist with product creation.",
-        "who are you": "I'm your AI assistant, here to help you manage and grow your business!"
-    }
-    return responses.get(user_input.lower(), "I'm here to chat! Let me know how I can help.")
+    try:
+        # ✅ Replace this URL with your actual AI API endpoint
+        api_url = "https://your-ai-api-endpoint.com/generate"
+        headers = {"Authorization": f"Bearer {HK_API_KEY}", "Content-Type": "application/json"}
+        payload = {"input": user_input}
+
+        response = requests.post(api_url, json=payload, headers=headers)
+        response_data = response.json()
+
+        # ✅ Fix: Ensure we correctly handle the response format
+        if isinstance(response_data, list) and len(response_data) > 0:
+            return response_data[0].get("generated_text", "I couldn't process that.")
+        elif isinstance(response_data, dict):
+            return response_data.get("generated_text", "I couldn't process that.")
+        else:
+            return "Unexpected API response format."
+
+    except Exception as e:
+        print(f"❌ Error in chatbot_response: {e}")
+        return "Sorry, an error occurred."
 
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
@@ -80,7 +93,7 @@ bot_app.add_handler(CommandHandler("stopbot", stopbot))    # ✅ Stop bot manual
 bot_app.add_handler(CommandHandler("showapikeys", show_apikeys))  # ✅ Show HK API Key
 bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-print("Bot is ready but inactive until started.")
+print("✅ Bot is ready but inactive until started.")
 
 # ✅ Run Flask & Telegram Bot
 import threading
