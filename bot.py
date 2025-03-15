@@ -27,11 +27,13 @@ def chatbot_response(user_input):
             result = response.json()
             print(f"🔍 Hugging Face Response JSON: {result}")  # Log full API response
 
-            if isinstance(result, list) and len(result) > 0:
-                # ✅ Handle API returning a list
-                if isinstance(result[0], dict) and "generated_text" in result[0]:
-                    return result[0]["generated_text"]
-                return "⚠️ Unexpected response format from Hugging Face."
+            if isinstance(result, list):
+                # ✅ Handle API returning a list format
+                for item in result:
+                    if isinstance(item, dict) and "generated_text" in item:
+                        return item["generated_text"]
+                return "⚠️ AI returned an unexpected list format."
+
             elif isinstance(result, dict) and "generated_text" in result:
                 return result["generated_text"]
 
