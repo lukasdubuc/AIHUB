@@ -17,7 +17,7 @@ app = Flask(__name__)
 def home():
     return "Bot is running!"
 
-# ✅ Load API Tokens from `api_config.json`
+# ✅ Load API Tokens from `api_config.json` using absolute path
 CONFIG_PATH = "/home/lukasdubuc/AIHUB/api_config.json"
 
 try:
@@ -25,6 +25,7 @@ try:
         config = json.load(file)
     BOT_TOKEN = config.get("BOT_TOKEN", "")
     HK_API_KEY = config.get("HK_API_KEY", "")
+    AI_API_URL = "https://your-hk-ai-api-endpoint.com/generate"  # ✅ Replace with actual AI API URL
 except Exception as e:
     print(f"❌ Error loading API config: {e}")
     exit(1)
@@ -35,9 +36,6 @@ bot_active = False  # ✅ Bot starts OFF
 # ✅ AI Chatbot Function (Handles List & Dict Responses)
 def chatbot_response(user_input):
     try:
-        # ✅ Replace with your actual AI API URL
-        AI_API_URL = "https://your-hk-ai-api-endpoint.com/generate"
-
         headers = {
             "Authorization": f"Bearer {HK_API_KEY}",
             "Content-Type": "application/json"
@@ -47,13 +45,19 @@ def chatbot_response(user_input):
         response = requests.post(AI_API_URL, json=payload, headers=headers)
         response_data = response.json()
 
-        # ✅ Ensure we correctly extract AI response
+        # ✅ Ensure correct response extraction
         if isinstance(response_data, list) and len(response_data) > 0:
-            return response_data[0].get("generated_text", "I couldn't process that.")
-        elif isinstance(response_data, dict):
-            return response_data.get("generated_text", "I couldn't process that.")
+            # Extract first response if API returns a list
+            if isinstance(response_data[0], dict) and "generated_text" in response_data[0]:
+                return response_data[0]["generated_text"]
+            else:
+                return "Unexpected response format from AI API."
+        
+        elif isinstance(response_data, dict) and "generated_text" in response_data:
+            return response_data["generated_text"]
+
         else:
-            return "Unexpected response format from AI API."
+            return "Unexpected response structure from AI API."
 
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error: {e}")
