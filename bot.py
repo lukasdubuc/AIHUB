@@ -23,9 +23,8 @@ CONFIG_PATH = "/home/lukasdubuc/AIHUB/api_config.json"
 try:
     with open(CONFIG_PATH, "r") as file:
         config = json.load(file)
-    BOT_TOKEN = config.get("BOT_TOKEN", "")
-    HK_API_KEY = config.get("HK_API_KEY", "")
-    AI_API_URL = "https://your-hk-ai-api-endpoint.com/generate"  # Replace with your actual AI API URL
+    BOT_TOKEN = config.get("BOT_TOKEN", "")  # Telegram bot token
+    HF_API_KEY = config.get("HF_API_KEY", "")  # Hugging Face API key
 except Exception as e:
     print(f"❌ Error loading API config: {e}")
     exit(1)
@@ -33,27 +32,39 @@ except Exception as e:
 # Track bot status
 bot_active = False
 
-# Chatbot Response (Fixed for List and Dict Responses)
+# Chatbot Response (Using Hugging Face API)
 def chatbot_response(user_input):
+    """Handles AI responses via Hugging Face API."""
+    if not bot_active:
+        return "❌ Bot is inactive. Use /startbot to activate."
+
+    # Check if HF_API_KEY is available
+    if not HF_API_KEY:
+        return "❌ No Hugging Face API key provided."
+
     try:
-        headers = {"Authorization": f"Bearer {HK_API_KEY}", "Content-Type": "application/json"}
-        payload = {"input": user_input}
-        response = requests.post(AI_API_URL, json=payload, headers=headers)
+        headers = {"Authorization": f"Bearer {HF_API_KEY}", "Content-Type": "application/json"}
+        data = {"inputs": user_input}
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+            headers=headers,
+            json=data
+        )
         response_data = response.json()
 
         # Handle list response (e.g., [{'generated_text': 'some text'}])
         if isinstance(response_data, list) and len(response_data) > 0:
             if isinstance(response_data[0], dict) and "generated_text" in response_data[0]:
                 return response_data[0]["generated_text"]
-            return "Unexpected response format from AI API."
+            return "Unexpected response format from Hugging Face API."
         # Handle dict response (e.g., {'generated_text': 'some text'})
         elif isinstance(response_data, dict) and "generated_text" in response_data:
             return response_data["generated_text"]
         else:
-            return "Unexpected response structure from AI API."
+            return "Unexpected response structure from Hugging Face API."
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error: {e}")
-        return "I'm having trouble connecting to the AI service."
+        return "I'm having trouble connecting to the Hugging Face API."
     except Exception as e:
         print(f"❌ Error in chatbot_response: {e}")
         return "Sorry, an unexpected error occurred."
