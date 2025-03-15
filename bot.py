@@ -2,33 +2,13 @@ from dotenv import load_dotenv
 import os
 import nest_asyncio
 import requests
-import threading
-import asyncio
-from flask import Flask
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+import os
 from transformers import pipeline
+from dotenv import load_dotenv
 
-# ✅ Load environment variables
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
-HF_API_KEY = os.getenv("HF_API_KEY")  # ✅ Using one key for both Hugging Face & Together AI
+HF_API_KEY = os.getenv("HF_API_KEY")
 
-# ✅ Ensure BOT_TOKEN exists
-if not TOKEN:
-    raise ValueError("⚠️ BOT_TOKEN is missing! Check environment variables.")
-
-# ✅ Initialize Flask app
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-# ✅ Track bot status
-bot_active = False  # Default OFF
-
-# ✅ AI Response Function
 def chatbot_response(user_input):
     """Handles AI responses via Hugging Face API, Together AI, or local model."""
     print(f"🔹 User Input: {user_input}")  # Debugging input
