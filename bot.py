@@ -28,9 +28,8 @@ def home():
 # ✅ Track bot status
 bot_active = False  # Default OFF
 
-# ✅ AI Response Function
-def chatbot_response(user_input):
-    """Handles AI responses via Hugging Face API, Together AI, or local model."""
+# ✅ AI def chatbot_response
+    (user_input):"Handles AI responses via Hugging Face API, Together AI, or local model."
     if not bot_active:
         return "❌ Bot is inactive. Use /startbot to activate."
 
@@ -48,7 +47,7 @@ def chatbot_response(user_input):
             result = response.json()
             if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
                 return result[0].get("generated_text", "I couldn't process that.")
-            return "⚠️ AI response format was unexpected."
+            return "⚠️ Unexpected response format from Hugging Face."
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
     # ✅ Fallback to Together AI with API Key
@@ -78,6 +77,7 @@ def chatbot_response(user_input):
     local_chatbot = pipeline("text-generation", model="microsoft/DialoGPT-medium")
     response = local_chatbot(user_input, max_length=100, pad_token_id=50256)
     return response[0]['generated_text']
+
 
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
