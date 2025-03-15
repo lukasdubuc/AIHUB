@@ -33,7 +33,7 @@ except Exception as e:
 # Track bot status
 bot_active = False
 
-# Chatbot Response (Using External AI API)
+# Chatbot Response (Fixed for List and Dict Responses)
 def chatbot_response(user_input):
     try:
         headers = {"Authorization": f"Bearer {HK_API_KEY}", "Content-Type": "application/json"}
