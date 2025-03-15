@@ -1,19 +1,9 @@
 from dotenv import load_dotenv
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
-
-if not TOKEN:
-    raise ValueError("Error: BOT_TOKEN is missing! Check .env file.")
-
 import nest_asyncio
-import os
 import requests
 import threading
 import asyncio
-import nest_asyncio
 from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -24,31 +14,27 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 HF_API_KEY = os.getenv("HF_API_KEY")
 
-# ✅ Check if bot token is missing
+# ✅ Ensure BOT_TOKEN exists
 if not TOKEN:
-    raise ValueError("⚠️ BOT_TOKEN is missing! Check .env file.")
+    raise ValueError("⚠️ BOT_TOKEN is missing! Check environment variables.")
 
-# ✅ Initialize Flask server (Prevents Google Cloud from shutting down)
+# ✅ Initialize Flask app
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot is running!"
 
-
 # ✅ Track bot status
-bot_active = False  # Bot is OFF by default
+bot_active = False  # Default OFF
 
-# ✅ AI Function: Try Hugging Face API, Then Together AI (Mixtral), Then Local Model
-
-# ✅ AI Function: First Try Hugging Face API, Then Together AI, Then Local Model
-
+# ✅ AI Response Function
 def chatbot_response(user_input):
-    """Handles AI responses using Hugging Face API, Together AI, or local model."""
+    """Handles AI responses via Hugging Face API, Together AI, or local model."""
     if not bot_active:
-        return "❌ Bot is inactive. Use /startbot to activate it."
+        return "❌ Bot is inactive. Use /startbot to activate."
 
-    # ✅ Option 1: Use Hugging Face API (if key is set)
+    # ✅ Try Hugging Face API if key is available
     if HF_API_KEY:
         headers = {"Authorization": f"Bearer {HF_API_KEY}"}
         data = {"inputs": user_input}
@@ -58,79 +44,40 @@ def chatbot_response(user_input):
         )
         if response.status_code == 200:
             return response.json().get("generated_text", "I couldn't process that.")
-        elif response.status_code == 403:
-            return "❌ API Error 403: Hugging Face model access restricted."
-        else:
-            print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
+        print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
-    # ✅ Option 2: Use Together AI with Mixtral model
-    url = "https://api.together.xyz/inference"
-    data = {
-        "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # Updated to Mixtral from 41b77cc
-        "prompt": user_input,
-        "max_tokens": 300  # Increased from 250 per 41b77cc
-    }
+    # ✅ Fallback to Together AI (Mixtral model)
+    together_url = "https://api.together.xyz/inference"
+    data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
     headers = {"Content-Type": "application/json"}
+    
     try:
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(together_url, json=data, headers=headers)
         if response.status_code == 200:
             return response.json().get("text", "I couldn't process that.")
-        elif response.status_code == 401:
-            return "⚠️ API access restricted. Trying another model..."
-        else:
-            return f"❌ API Error {response.status_code}: {response.text}"
+        print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
     except Exception as e:
-        print(f"⚠️ Together AI Error: {str(e)}")
+        print(f"⚠️ Together AI Request Error: {str(e)}")
 
-    # ✅ Option 3: Use Local Model as Fallback
+    # ✅ Final fallback: Local AI Model
     print("⚠️ Falling back to local AI model...")
     local_chatbot = pipeline("text-generation", model="microsoft/DialoGPT-medium")
     response = local_chatbot(user_input, max_length=100, pad_token_id=50256)
     return response[0]['generated_text']
 
-# ✅ Get Bot Token from Railway Variables
-TOKEN = os.getenv("BOT_TOKEN")
-
-# ✅ Track bot status
-bot_active = False  # ✅ New: Bot is OFF by default
-
-# ✅ Chatbot response
-import requests
-
-def chatbot_response(user_input):
-    url = "https://api.together.xyz/inference"
-    data = {
-        "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # Switch to Mixtral AI
-        "prompt": user_input,
-        "max_tokens": 300  # Increase for longer responses
-    }
-    headers = {"Content-Type": "application/json"}
-
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("text", "I couldn't process that.")
-        elif response.status_code == 401:
-            return "⚠️ API access restricted. Trying another model..."
-        else:
-            return f"❌ API Error {response.status_code}: {response.text}"
-    except Exception as e:
-        return f"❌ Request failed: {str(e)}"
-
-
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
     global bot_active
     bot_active = True
-    await update.message.reply_text("✅ The bot is now active! You can chat and use commands.")
+    await update.message.reply_text("✅ Bot is now active! You can chat and use commands.")
 
 # ✅ Stop the bot manually
 async def stopbot(update: Update, context: CallbackContext):
     global bot_active
     bot_active = False
-    await update.message.reply_text("❌ The bot has been deactivated. Type `/startbot` when you need it again.")
+    await update.message.reply_text("❌ Bot has been deactivated. Use /startbot to activate again.")
 
-# ✅ Handle messages (route them to AI)
+# ✅ Handle user messages
 async def chat(update: Update, context: CallbackContext):
     user_text = update.message.text.strip()
     response = chatbot_response(user_text)
@@ -142,23 +89,20 @@ bot_app.add_handler(CommandHandler("startbot", startbot))
 bot_app.add_handler(CommandHandler("stopbot", stopbot))
 bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-print("This is my local version of bot.py")
-print("This is the GitHub version of bot.py")
+print("✅ Bot is ready!")
+print("🌍 Running on macOS/Linux-compatible setup")
 
-
-# ✅ Run Flask & Telegram Bot
-import threading
-import asyncio
+# ✅ Run Flask & Telegram Bot Together
 def run_flask():
-    app.run(host="0.0.0.0", port=5000)
+    """Run Flask app on a separate thread."""
+    from waitress import serve  # macOS-compatible production server
+    serve(app, host="0.0.0.0", port=5000)
 
 # Start Flask in a separate thread
-flask_thread = threading.Thread(target=run_flask)
+flask_thread = threading.Thread(target=run_flask, daemon=True)
 flask_thread.start()
 
-# Start Telegram bot polling
-nest_asyncio.apply()  # Added to handle nested asyncio in some environments
-
-# Start Telegram bot polling
+# ✅ Start Telegram bot polling (Fixes macOS asyncio issue)
+nest_asyncio.apply()
 asyncio.run(bot_app.run_polling())
 
