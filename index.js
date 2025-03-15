@@ -1,7 +1,10 @@
 
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv';git add .
+  
+git commit -m "Initial commit"
+git push -u origin main
 
 dotenv.config();
 
