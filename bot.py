@@ -27,17 +27,21 @@ def chatbot_response(user_input):
             result = response.json()
             print(f"🔍 Hugging Face Response JSON: {result}")  # Log full API response
 
-            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
-                return result[0].get("generated_text", "⚠️ Unexpected response format.")
+            if isinstance(result, list) and len(result) > 0:
+                # ✅ Handle API returning a list
+                if isinstance(result[0], dict) and "generated_text" in result[0]:
+                    return result[0]["generated_text"]
+                return "⚠️ Unexpected response format from Hugging Face."
             elif isinstance(result, dict) and "generated_text" in result:
                 return result["generated_text"]
+
             return f"⚠️ Unexpected response format from Hugging Face: {result}"
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
     # ✅ Fallback to Together AI (Using the same HF_API_KEY)
     together_url = "https://api.together.xyz/inference"
     headers = {
-        "Authorization": f"Bearer {HF_API_KEY}",  # ✅ Uses the same Hugging Face API key
+        "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
     }
     data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
