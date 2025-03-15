@@ -12,8 +12,7 @@ from transformers import pipeline
 # ✅ Load environment variables
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
-HF_API_KEY = os.getenv("HF_API_KEY")
-TOGETHER_AI_KEY = os.getenv("TOGETHER_AI_KEY")  # ✅ Ensure Together AI key is loaded
+HF_API_KEY = os.getenv("HF_API_KEY")  # ✅ Using one key for both Hugging Face & Together AI
 
 # ✅ Ensure BOT_TOKEN exists
 if not TOKEN:
@@ -55,29 +54,28 @@ def chatbot_response(user_input):
             return f"⚠️ Unexpected response format from Hugging Face: {result}"
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
-    # ✅ Fallback to Together AI with API Key
-    if TOGETHER_AI_KEY:
-        together_url = "https://api.together.xyz/inference"
-        headers = {
-            "Authorization": f"Bearer {TOGETHER_AI_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
+    # ✅ Fallback to Together AI (Using the same HF_API_KEY)
+    together_url = "https://api.together.xyz/inference"
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",  # ✅ Uses the same Hugging Face API key
+        "Content-Type": "application/json"
+    }
+    data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
 
-        try:
-            response = requests.post(together_url, json=data, headers=headers)
-            print(f"🔹 Together AI API Response: {response.status_code} - {response.text}")
+    try:
+        response = requests.post(together_url, json=data, headers=headers)
+        print(f"🔹 Together AI API Response: {response.status_code} - {response.text}")
 
-            if response.status_code == 200:
-                result = response.json()
-                print(f"🔍 Together AI Response JSON: {result}")  # Log full API response
+        if response.status_code == 200:
+            result = response.json()
+            print(f"🔍 Together AI Response JSON: {result}")  # Log full API response
 
-                if isinstance(result, dict) and "text" in result:
-                    return result["text"]
-                return f"⚠️ Unexpected response format from Together AI: {result}"
-            print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
-        except Exception as e:
-            print(f"⚠️ Together AI Request Error: {str(e)}")
+            if isinstance(result, dict) and "text" in result:
+                return result["text"]
+            return f"⚠️ Unexpected response format from Together AI: {result}"
+        print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"⚠️ Together AI Request Error: {str(e)}")
 
     # ✅ Final fallback: Local AI Model
     print("⚠️ Falling back to local AI model...")
