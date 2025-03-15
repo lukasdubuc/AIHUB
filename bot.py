@@ -2,42 +2,33 @@ import json
 import asyncio
 import nest_asyncio
 import requests
-from flask import Flask
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from flask import Flask, request, jsonify
 import threading
 
 # Prevent async issues
 nest_asyncio.apply()
 
-# Set up Flask server (Keeps Google Cloud alive)
+# Set up Flask server (Keeps Replit instance alive)
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "AI Chatbot is running!"
+    return "✅ AI Hub is running!"
 
 # Load API Tokens from `api_config.json`
-CONFIG_PATH = "/home/lukasdubuc/AIHUB/api_config.json"
+CONFIG_PATH = "api_config.json"  # Change this path if needed
 
 try:
     with open(CONFIG_PATH, "r") as file:
         config = json.load(file)
-    BOT_TOKEN = config.get("BOT_TOKEN", "")
     HF_API_KEY = config.get("HF_API_KEY", "")
 except Exception as e:
     print(f"❌ Error loading API config: {e}")
     exit(1)
 
-# Track bot status
-bot_active = False
-
 # Chatbot Response (Using Hugging Face API)
 def chatbot_response(user_input):
     """Handles AI responses via Hugging Face API."""
-    if not bot_active:
-        return "❌ Bot is inactive. Use /startbot to activate."
-
     if not HF_API_KEY:
         return "❌ No Hugging Face API key provided."
 
@@ -51,68 +42,45 @@ def chatbot_response(user_input):
         )
         response_data = response.json()
 
-        # Handle list response (e.g., [{'generated_text': 'some text'}])
-        if isinstance(response_data, list) and len(response_data) > 0:
-            if isinstance(response_data[0], dict) and "generated_text" in response_data[0]:
-                return response_data[0]["generated_text"]
-            return "Unexpected response format from Hugging Face API."
-        # Handle dict response (e.g., {'generated_text': 'some text'})
+        if isinstance(response_data, list) and "generated_text" in response_data[0]:
+            return response_data[0]["generated_text"]
         elif isinstance(response_data, dict) and "generated_text" in response_data:
             return response_data["generated_text"]
         else:
-            return "Unexpected response structure from Hugging Face API."
+            return "Unexpected response from Hugging Face API."
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error: {e}")
         return "I'm having trouble connecting to the Hugging Face API."
     except Exception as e:
         print(f"❌ Error in chatbot_response: {e}")
-        return "Sorry, an unexpected error occurred."
+        return "An unexpected error occurred."
 
-# Telegram Command Handlers
-async def startbot(update: Update, context: CallbackContext):
-    global bot_active
-    bot_active = True
-    await update.message.reply_text("✅ The AI Chatbot is now active! Start chatting with me.")
+# AI Business Report (Using Hugging Face API)
+def generate_business_report():
+    """Generates an AI-driven business report."""
+    return chatbot_response("Generate a weekly financial report with revenue, expenses, and insights.")
 
-async def stopbot(update: Update, context: CallbackContext):
-    global bot_active
-    bot_active = False
-    await update.message.reply_text("❌ The AI Chatbot is deactivated. Use `/startbot` to reactivate.")
-    print("AI Chatbot has been manually stopped.")
+# Flask API - Get AI-Generated Business Report
+@app.route('/business-report', methods=['GET'])
+def business_report():
+    report = generate_business_report()
+    return jsonify({"report": report})
 
-async def chat(update: Update, context: CallbackContext):
-    global bot_active
-    if not bot_active:
-        return
+# Flask API - AI Chat Assistant
+@app.route('/ask-ai', methods=['POST'])
+def ask_ai():
+    data = request.get_json()
+    user_message = data.get("message", "")
 
-    user_text = update.message.text.strip()
-    response = chatbot_response(user_text)
-    await update.message.reply_text(response)
+    if not user_message:
+        return jsonify({"error": "Message is required."}), 400
 
-# Error Handler for Telegram
-async def error_handler(update: Update, context: CallbackContext):
-    print(f"❌ Exception occurred: {context.error}")
-    try:
-        await update.message.reply_text("Sorry, something went wrong. Please try again.")
-    except Exception:
-        pass  # Avoid infinite loop if reply fails
+    response = chatbot_response(user_message)
+    return jsonify({"response": response})
 
-# Initialize Telegram Bot
-bot_app = Application.builder().token(BOT_TOKEN).build()
-
-# Add Handlers
-bot_app.add_handler(CommandHandler("startbot", startbot))
-bot_app.add_handler(CommandHandler("stopbot", stopbot))
-bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-bot_app.add_error_handler(error_handler)
-
-print("✅ AI Chatbot is ready but inactive until started.")
-
-# Run Flask & Telegram Bot
+# Run Flask Server in a Thread (To Keep It Running on Replit)
 def run_flask():
     app.run(host="0.0.0.0", port=5000)
 
 flask_thread = threading.Thread(target=run_flask)
 flask_thread.start()
-
-asyncio.get_event_loop().run_until_complete(bot_app.run_polling())
