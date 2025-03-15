@@ -22,15 +22,27 @@ TOKEN = os.getenv("BOT_TOKEN")
 bot_active = False  # ✅ New: Bot is OFF by default
 
 # ✅ Chatbot responses
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+HF_API_KEY = os.getenv("HF_API_KEY")
+
 def chatbot_response(user_input):
-    responses = {
-        "hi": "Hello! How can I assist you today?",
-        "hello": "Hey there! What’s on your mind?",
-        "how are you": "I'm just an AI, but I'm doing great! How about you?",
-        "what can you do": "I can chat, help with business automation, and assist with product creation.",
-        "who are you": "I'm your AI assistant, here to help you manage and grow your business!",
-    }
-    return responses.get(user_input.lower(), "I'm here to chat! Let me know how I can help.")
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    data = {"inputs": user_input}
+    
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1",
+        json=data, headers=headers
+    )
+
+    if response.status_code == 200:
+        return response.json().get("generated_text", "I couldn't process that.")
+    else:
+        return f"❌ API Error {response.status_code}: {response.text}"
+
 
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
