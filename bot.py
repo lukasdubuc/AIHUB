@@ -98,16 +98,7 @@ bot_app.add_handler(CommandHandler("startbot", startbot))
 bot_app.add_handler(CommandHandler("stopbot", stopbot))
 bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-def rewrite_self(update: Update, context: CallbackContext):
-    user_input = update.message.text.strip()
-    # Ask AI to rewrite this file
-    prompt = f"Rewrite this Python code based on this request: {user_input}\n\n{open('bot.py', 'r').read()}"
-    new_code = chatbot_response(prompt)
-    with open('bot.py', 'w') as f:
-        f.write(new_code)
-    await update.message.reply_text("✅ I've rewritten myself! Restart me to see changes.")
 
-bot_app.add_handler(CommandHandler("rewrite", rewrite_self))
 
 # ✅ Run Flask & Telegram Bot
 def run_flask():
