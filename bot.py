@@ -23,8 +23,8 @@ CONFIG_PATH = "/home/lukasdubuc/AIHUB/api_config.json"
 try:
     with open(CONFIG_PATH, "r") as file:
         config = json.load(file)
-    BOT_TOKEN = config.get("BOT_TOKEN", "")  # Telegram bot token
-    HF_API_KEY = config.get("HF_API_KEY", "")  # Hugging Face API key
+    BOT_TOKEN = config.get("BOT_TOKEN", "")
+    HF_API_KEY = config.get("HF_API_KEY", "")
 except Exception as e:
     print(f"❌ Error loading API config: {e}")
     exit(1)
@@ -38,7 +38,6 @@ def chatbot_response(user_input):
     if not bot_active:
         return "❌ Bot is inactive. Use /startbot to activate."
 
-    # Check if HF_API_KEY is available
     if not HF_API_KEY:
         return "❌ No Hugging Face API key provided."
 
