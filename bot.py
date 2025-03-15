@@ -36,6 +36,13 @@ from dotenv import load_dotenv
 load_dotenv()
 HF_API_KEY = os.getenv("HF_API_KEY")
 
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+HF_API_KEY = os.getenv("HF_API_KEY")
+
 def chatbot_response(user_input):
     if not HF_API_KEY:
         return "⚠️ AI API Key is missing!"
@@ -49,8 +56,11 @@ def chatbot_response(user_input):
             json=data, headers=headers
         )
 
+        # Debugging: Print the API response
+        print("API Response:", response.status_code, response.text)
+
         if response.status_code == 200:
-            return response.json()["generated_text"]
+            return response.json()[0]["generated_text"]
         elif response.status_code == 403:
             return "❌ API Error 403: Model access is restricted."
         elif response.status_code == 404:
@@ -59,7 +69,6 @@ def chatbot_response(user_input):
             return f"❌ API Error {response.status_code}: {response.text}"
     except Exception as e:
         return f"❌ AI Request Failed: {str(e)}"
-
 
 
 # ✅ Start the bot manually
