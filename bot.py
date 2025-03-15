@@ -30,10 +30,10 @@ except Exception as e:
 # ✅ Track bot status
 bot_active = False  # ✅ Bot starts OFF
 
-# ✅ Chatbot responses
+# ✅ AI Chatbot Function
 def chatbot_response(user_input):
     try:
-        # ✅ Replace this URL with your actual AI API endpoint
+        # ✅ Replace with your actual AI API endpoint
         api_url = "https://your-ai-api-endpoint.com/generate"
         headers = {"Authorization": f"Bearer {HK_API_KEY}", "Content-Type": "application/json"}
         payload = {"input": user_input}
@@ -41,17 +41,23 @@ def chatbot_response(user_input):
         response = requests.post(api_url, json=payload, headers=headers)
         response_data = response.json()
 
-        # ✅ Fix: Ensure we correctly handle the response format
-        if isinstance(response_data, list) and len(response_data) > 0:
-            return response_data[0].get("generated_text", "I couldn't process that.")
-        elif isinstance(response_data, dict):
+        # ✅ Fix: Ensure we correctly extract AI response from a list or dictionary
+        if isinstance(response_data, list):  # If API returns a list, get first item
+            if len(response_data) > 0 and isinstance(response_data[0], dict):
+                return response_data[0].get("generated_text", "I couldn't process that.")
+            else:
+                return "Unexpected API response format."
+        elif isinstance(response_data, dict):  # If API returns a dictionary
             return response_data.get("generated_text", "I couldn't process that.")
         else:
-            return "Unexpected API response format."
+            return "Unexpected response type from API."
 
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Network error: {e}")
+        return "Sorry, I had trouble connecting to the AI service."
     except Exception as e:
         print(f"❌ Error in chatbot_response: {e}")
-        return "Sorry, an error occurred."
+        return "Sorry, an unexpected error occurred."
 
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
