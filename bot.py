@@ -32,8 +32,7 @@ bot_active = False  # Default OFF
 # ✅ AI Response Function
 def chatbot_response(user_input):
     """Handles AI responses via Hugging Face API, Together AI, or local model."""
-    if not bot_active:
-        return "❌ Bot is inactive. Use /startbot to activate."
+    print(f"🔹 User Input: {user_input}")  # Debugging input
 
     # ✅ Try Hugging Face API first
     if HF_API_KEY:
@@ -47,9 +46,13 @@ def chatbot_response(user_input):
 
         if response.status_code == 200:
             result = response.json()
+            print(f"🔍 Hugging Face Response JSON: {result}")  # Log full API response
+
             if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
-                return result[0].get("generated_text", "I couldn't process that.")
-            return "⚠️ Unexpected response format from Hugging Face."
+                return result[0].get("generated_text", "⚠️ Unexpected response format.")
+            elif isinstance(result, dict) and "generated_text" in result:
+                return result["generated_text"]
+            return f"⚠️ Unexpected response format from Hugging Face: {result}"
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
     # ✅ Fallback to Together AI with API Key
@@ -60,16 +63,18 @@ def chatbot_response(user_input):
             "Content-Type": "application/json"
         }
         data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
-        
+
         try:
             response = requests.post(together_url, json=data, headers=headers)
             print(f"🔹 Together AI API Response: {response.status_code} - {response.text}")
 
             if response.status_code == 200:
                 result = response.json()
+                print(f"🔍 Together AI Response JSON: {result}")  # Log full API response
+
                 if isinstance(result, dict) and "text" in result:
                     return result["text"]
-                return "⚠️ Unexpected AI response format."
+                return f"⚠️ Unexpected response format from Together AI: {result}"
             print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
         except Exception as e:
             print(f"⚠️ Together AI Request Error: {str(e)}")
@@ -79,7 +84,6 @@ def chatbot_response(user_input):
     local_chatbot = pipeline("text-generation", model="microsoft/DialoGPT-medium")
     response = local_chatbot(user_input, max_length=100, pad_token_id=50256)
     return response[0]['generated_text']
-
 
 # ✅ Start the bot manually
 async def startbot(update: Update, context: CallbackContext):
