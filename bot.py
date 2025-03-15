@@ -13,6 +13,7 @@ from transformers import pipeline
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 HF_API_KEY = os.getenv("HF_API_KEY")
+TOGETHER_AI_KEY = os.getenv("TOGETHER_AI_KEY")  # ✅ Ensure Together AI key is loaded
 
 # ✅ Ensure BOT_TOKEN exists
 if not TOKEN:
@@ -28,8 +29,9 @@ def home():
 # ✅ Track bot status
 bot_active = False  # Default OFF
 
-# ✅ AI def chatbot_response
-    (user_input):"Handles AI responses via Hugging Face API, Together AI, or local model."
+# ✅ AI Response Function
+def chatbot_response(user_input):
+    """Handles AI responses via Hugging Face API, Together AI, or local model."""
     if not bot_active:
         return "❌ Bot is inactive. Use /startbot to activate."
 
@@ -65,8 +67,8 @@ bot_active = False  # Default OFF
 
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, dict):
-                    return result.get("text", "I couldn't process that.")
+                if isinstance(result, dict) and "text" in result:
+                    return result["text"]
                 return "⚠️ Unexpected AI response format."
             print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
         except Exception as e:
