@@ -29,27 +29,37 @@ from dotenv import load_dotenv
 load_dotenv()
 HF_API_KEY = os.getenv("HF_API_KEY")
 
-def chatbot_response(user_input):
-    import requests
+import requests
+import os
+from dotenv import load_dotenv
 
-    url = "https://api.together.xyz/inference"
-    data = {
-        "model": "openchat/openchat-3.5-0106",
-        "prompt": user_input,
-        "max_tokens": 250
-    }
-    headers = {"Content-Type": "application/json"}
+load_dotenv()
+HF_API_KEY = os.getenv("HF_API_KEY")
+
+def chatbot_response(user_input):
+    if not HF_API_KEY:
+        return "⚠️ AI API Key is missing!"
+
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    data = {"inputs": user_input}
 
     try:
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+            json=data, headers=headers
+        )
+
         if response.status_code == 200:
-            return response.json().get("text", "I couldn't process that.")
-        elif response.status_code == 401:
-            return "⚠️ API access restricted. Trying another model..."
+            return response.json()["generated_text"]
+        elif response.status_code == 403:
+            return "❌ API Error 403: Model access is restricted."
+        elif response.status_code == 404:
+            return "❌ API Error 404: Model not found."
         else:
             return f"❌ API Error {response.status_code}: {response.text}"
     except Exception as e:
-        return f"❌ Request failed: {str(e)}"
+        return f"❌ AI Request Failed: {str(e)}"
+
 
 
 # ✅ Start the bot manually
