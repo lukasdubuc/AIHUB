@@ -34,7 +34,7 @@ def chatbot_response(user_input):
     if not bot_active:
         return "❌ Bot is inactive. Use /startbot to activate."
 
-    # ✅ Try Hugging Face API if key is available
+    # ✅ Try Hugging Face API first
     if HF_API_KEY:
         headers = {"Authorization": f"Bearer {HF_API_KEY}"}
         data = {"inputs": user_input}
@@ -42,27 +42,36 @@ def chatbot_response(user_input):
             "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
             json=data, headers=headers
         )
+        print(f"🔹 Hugging Face API Response: {response.status_code} - {response.text}")
 
         if response.status_code == 200:
             result = response.json()
-            if isinstance(result, list) and len(result) > 0:
+            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
                 return result[0].get("generated_text", "I couldn't process that.")
-            return "⚠️ AI did not return a response."
+            return "⚠️ AI response format was unexpected."
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
-    # ✅ Fallback to Together AI (Mixtral model)
-    together_url = "https://api.together.xyz/inference"
-    data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
-    headers = {"Content-Type": "application/json"}
-    
-    try:
-        response = requests.post(together_url, json=data, headers=headers)
-        if response.status_code == 200:
-            result = response.json()
-            return result.get("text", "I couldn't process that.")
-        print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
-    except Exception as e:
-        print(f"⚠️ Together AI Request Error: {str(e)}")
+    # ✅ Fallback to Together AI with API Key
+    if TOGETHER_AI_KEY:
+        together_url = "https://api.together.xyz/inference"
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_AI_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {"model": "mistralai/Mixtral-8x7B-Instruct-v0.1", "prompt": user_input, "max_tokens": 300}
+        
+        try:
+            response = requests.post(together_url, json=data, headers=headers)
+            print(f"🔹 Together AI API Response: {response.status_code} - {response.text}")
+
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, dict):
+                    return result.get("text", "I couldn't process that.")
+                return "⚠️ Unexpected AI response format."
+            print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"⚠️ Together AI Request Error: {str(e)}")
 
     # ✅ Final fallback: Local AI Model
     print("⚠️ Falling back to local AI model...")
