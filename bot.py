@@ -42,8 +42,12 @@ def chatbot_response(user_input):
             "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
             json=data, headers=headers
         )
+
         if response.status_code == 200:
-            return response.json().get("generated_text", "I couldn't process that.")
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get("generated_text", "I couldn't process that.")
+            return "⚠️ AI did not return a response."
         print(f"⚠️ Hugging Face API Error: {response.status_code} - {response.text}")
 
     # ✅ Fallback to Together AI (Mixtral model)
@@ -54,7 +58,8 @@ def chatbot_response(user_input):
     try:
         response = requests.post(together_url, json=data, headers=headers)
         if response.status_code == 200:
-            return response.json().get("text", "I couldn't process that.")
+            result = response.json()
+            return result.get("text", "I couldn't process that.")
         print(f"⚠️ Together AI Error: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"⚠️ Together AI Request Error: {str(e)}")
@@ -105,4 +110,3 @@ flask_thread.start()
 # ✅ Start Telegram bot polling (Fixes macOS asyncio issue)
 nest_asyncio.apply()
 asyncio.run(bot_app.run_polling())
-
